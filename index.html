@@ -620,8 +620,9 @@ function showPanel(name) {
 
 async function postData(payload) {
   const r = await fetch(SCRIPT_URL, {
-    method: "POST", body: JSON.stringify(payload),
-    headers: { "Content-Type": "application/json" }
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: { "Content-Type": "text/plain" }
   });
   return r.json();
 }

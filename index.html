@@ -326,9 +326,7 @@
 
       <div class="section-title">Daily Safety Checks</div>
       <button class="all-checks-btn" onclick="tickAll('zl-checks')">✅ Mark All as OK</button>
-      <div class="check-grid" id="zl-checks">
-        <!-- Checks rendered by JS -->
-      </div>
+      <div class="check-grid" id="zl-checks"></div>
 
       <div class="section-title">ZipStop System</div>
       <div class="check-grid" id="zl-zipstop"></div>
@@ -488,7 +486,6 @@
         <p style="color:var(--text-muted);">Loading certifications…</p>
       </div>
 
-      <!-- Update form -->
       <div id="cert-edit-form" class="edit-form">
         <div class="section-title" style="margin-top:0;">Update Certification Record</div>
         <input type="hidden" id="edit-cert-id">
@@ -507,7 +504,6 @@
         <button class="btn-submit annual" id="cert-save-btn" onclick="saveCertification()">💾 Save Certification Update</button>
         <div id="cert-status-banner" class="status-banner"></div>
       </div>
-
     </div>
   </div>
 </div>
@@ -526,7 +522,7 @@
       <div class="section-title">Incident Details</div>
       <div class="form-grid two">
         <div class="form-group"><label class="required">Activity</label>
-          <select id="inc-activity"><option value="">Select</option><option value="Zipline">Zipline</option><option value="Giant Swing">Giant Swing</option><option value="Slingshot">Slingshot</option><option value="General / Site">General / Site</option></select>
+          <select id="inc-activity"><option value="">Select</option><option value="Zipline">Zipline</option><option value="Giant Swing">Giant Swing</option><option value="Slingshot">Slingshot</option><option value="Chairlift Rescue">Chairlift Rescue</option><option value="General / Site">General / Site</option></select>
         </div>
         <div class="form-group"><label class="required">Incident Type</label>
           <select id="inc-type"><option value="">Select</option><option value="Equipment Failure">Equipment Failure</option><option value="Guest Injury">Guest Injury</option><option value="Staff Injury">Staff Injury</option><option value="Near Miss">Near Miss</option><option value="Weather Suspension">Weather Suspension</option><option value="Vandalism / Sabotage">Vandalism / Sabotage</option><option value="Structural Issue">Structural Issue</option><option value="Other">Other</option></select>
@@ -625,7 +621,7 @@
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────
-const SCRIPT_URL = "YOUR_APPS_SCRIPT_URL_HERE"; // ← Replace after deploying Apps Script
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5Ul6VqHbwlkUg16ymnVpQaukjVh30NTokPceAafmPnjhHnsOZSGw70PMzdESLN3KE2g/exec";
 
 // ── CHECK ITEM DEFINITIONS ─────────────────────────────────
 
@@ -726,8 +722,6 @@ const SS_CHECKS = [
   { id: "ss29", label: "Second staff member present during operation" },
 ];
 
-// ── CHAIRLIFT RESCUE CHECK DEFINITIONS ────────────────────
-
 const CL_AIRBAG = [
   { id: "cl_ab_fh",   label: "1 x Full body harness" },
   { id: "cl_ab_bc",   label: "1 x Black carabiner" },
@@ -762,8 +756,6 @@ const CL_STORAGE = [
   { id: "cl_st_acc",  label: "Rescue bags accessible and not obstructed" },
 ];
 
-// ── INIT ───────────────────────────────────────────────────
-
 window.certsCache = [];
 
 function init() {
@@ -777,8 +769,6 @@ function init() {
   renderCheckGrid("zl-start-checks", ZL_START);
   renderCheckGrid("gs-checks", GS_CHECKS);
   renderCheckGrid("ss-checks", SS_CHECKS);
-
-  // Render Chairlift Rescue checks — Set 1 and Set 2 with suffixed IDs
   renderCheckGrid("cl-airbag1",    CL_AIRBAG.map(c => ({ id: c.id + "_s1", label: c.label })));
   renderCheckGrid("cl-airbag2",    CL_AIRBAG.map(c => ({ id: c.id + "_s2", label: c.label })));
   renderCheckGrid("cl-groundbag1", CL_GROUNDBAG.map(c => ({ id: c.id + "_s1", label: c.label })));
@@ -832,8 +822,6 @@ function getChecked(ids) {
   return result;
 }
 
-// ── YES/NO TOGGLE ──────────────────────────────────────────
-
 function setYN(btn, val) {
   const group = btn.closest(".yn-group");
   group.querySelectorAll(".yn-btn").forEach(b => b.classList.remove("active"));
@@ -845,8 +833,6 @@ function getYN(group) {
   return active ? active.textContent.trim() : "NO";
 }
 
-// ── PANEL SWITCHING ────────────────────────────────────────
-
 function showPanel(name) {
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
@@ -855,8 +841,6 @@ function showPanel(name) {
   if (name === "annual") loadCertifications();
   if (name === "dashboard") loadDashboard();
 }
-
-// ── SUBMIT HELPERS ─────────────────────────────────────────
 
 async function postData(payload) {
   const r = await fetch(SCRIPT_URL, {
@@ -885,53 +869,34 @@ function setLoading(btnId, loading) {
   }
 }
 
-// ── ZIPLINE SUBMIT ─────────────────────────────────────────
-
 async function submitZipline() {
   const op = document.getElementById("zl-op").value.trim();
   const start = document.getElementById("zl-start").value;
   if (!op || !start) { showBanner("zl-status-banner","error","⚠️ Please fill in Operator Name and Shift Start."); return; }
-
   const btn = document.getElementById("zl-submit-btn");
   btn.setAttribute("data-orig", btn.innerHTML);
   setLoading("zl-submit-btn", true);
-
   const signGroups = document.querySelectorAll("#panel-zipline .yn-group");
   const allIds = ZL_CHECKS.concat(ZL_ZIPSTOP).concat(ZL_LANDING).concat(ZL_START).map(c => c.id);
   const checks = getChecked(allIds);
-
   const payload = {
-    action: "submitZipline",
-    operatorName: op,
-    shiftStart: start,
+    action: "submitZipline", operatorName: op, shiftStart: start,
     shiftEnd: document.getElementById("zl-end").value,
     customersTotal: document.getElementById("zl-cust").value,
-    zl43: document.getElementById("zl43").value,
-    zl44: document.getElementById("zl44").value,
-    weatherTop: document.getElementById("zl-wtop").value,
-    tempTop: document.getElementById("zl-ttop").value,
-    windSpeedTop: document.getElementById("zl-wstop").value,
-    windDirTop: document.getElementById("zl-wdtop").value,
-    weatherBase: document.getElementById("zl-wbase").value,
-    tempBase: document.getElementById("zl-tbase").value,
-    windSpeedBase: document.getElementById("zl-wsbase").value,
-    windDirBase: document.getElementById("zl-wdbase").value,
-    pulleysTotal: document.getElementById("zl-ptot").value,
-    pulleysOK: document.getElementById("zl-pok").value,
-    harnessesTotal: document.getElementById("zl-htot").value,
-    harnessesOK: document.getElementById("zl-hok").value,
-    helmetsTotal: document.getElementById("zl-hmtot").value,
-    helmetsOK: document.getElementById("zl-hmok").value,
-    ...checks,
-    pulleysSN: document.getElementById("zl-pulleys-sn").value,
+    zl43: document.getElementById("zl43").value, zl44: document.getElementById("zl44").value,
+    weatherTop: document.getElementById("zl-wtop").value, tempTop: document.getElementById("zl-ttop").value,
+    windSpeedTop: document.getElementById("zl-wstop").value, windDirTop: document.getElementById("zl-wdtop").value,
+    weatherBase: document.getElementById("zl-wbase").value, tempBase: document.getElementById("zl-tbase").value,
+    windSpeedBase: document.getElementById("zl-wsbase").value, windDirBase: document.getElementById("zl-wdbase").value,
+    pulleysTotal: document.getElementById("zl-ptot").value, pulleysOK: document.getElementById("zl-pok").value,
+    harnessesTotal: document.getElementById("zl-htot").value, harnessesOK: document.getElementById("zl-hok").value,
+    helmetsTotal: document.getElementById("zl-hmtot").value, helmetsOK: document.getElementById("zl-hmok").value,
+    ...checks, pulleysSN: document.getElementById("zl-pulleys-sn").value,
     lastRescueTraining: document.getElementById("zl-lastres").value,
     nextRescueTraining: document.getElementById("zl-nextres").value,
-    supervisorSigned: getYN(signGroups[0]),
-    engineerSigned: getYN(signGroups[1]),
-    techManagerSigned: getYN(signGroups[2]),
-    comments: document.getElementById("zl-comments").value,
+    supervisorSigned: getYN(signGroups[0]), engineerSigned: getYN(signGroups[1]),
+    techManagerSigned: getYN(signGroups[2]), comments: document.getElementById("zl-comments").value,
   };
-
   try {
     const res = await postData(payload);
     if (res.success) {
@@ -944,35 +909,24 @@ async function submitZipline() {
   finally { setLoading("zl-submit-btn", false); btn.innerHTML = "🪂 Submit Zipline Daily Check"; }
 }
 
-// ── GIANT SWING SUBMIT ─────────────────────────────────────
-
 async function submitGiantSwing() {
   const op = document.getElementById("gs-op").value.trim();
   const start = document.getElementById("gs-start").value;
   if (!op || !start) { showBanner("gs-status-banner","error","⚠️ Please fill in Operator Name and Shift Start."); return; }
-
   const btn = document.getElementById("gs-submit-btn");
   btn.setAttribute("data-orig", btn.innerHTML);
   setLoading("gs-submit-btn", true);
-
   const signGroups = document.querySelectorAll("#panel-giant .yn-group");
   const checks = getChecked(GS_CHECKS.map(c => c.id));
-
   const payload = {
-    action: "submitGiantSwing",
-    operatorName: op,
-    shiftStart: start,
+    action: "submitGiantSwing", operatorName: op, shiftStart: start,
     shiftEnd: document.getElementById("gs-end").value,
     ridersTotal: document.getElementById("gs-riders").value,
-    ...checks,
-    gs18: document.getElementById("gs-lastres").value,
+    ...checks, gs18: document.getElementById("gs-lastres").value,
     gs19: document.getElementById("gs-nextres").value,
-    supervisorSigned: getYN(signGroups[0]),
-    engineerSigned: getYN(signGroups[1]),
-    techManagerSigned: getYN(signGroups[2]),
-    comments: document.getElementById("gs-comments").value,
+    supervisorSigned: getYN(signGroups[0]), engineerSigned: getYN(signGroups[1]),
+    techManagerSigned: getYN(signGroups[2]), comments: document.getElementById("gs-comments").value,
   };
-
   try {
     const res = await postData(payload);
     if (res.success) {
@@ -985,35 +939,24 @@ async function submitGiantSwing() {
   finally { setLoading("gs-submit-btn", false); btn.innerHTML = "🌀 Submit Giant Swing Daily Check"; }
 }
 
-// ── SLINGSHOT SUBMIT ───────────────────────────────────────
-
 async function submitSlingshot() {
   const op = document.getElementById("ss-op").value.trim();
   const start = document.getElementById("ss-start").value;
   if (!op || !start) { showBanner("ss-status-banner","error","⚠️ Please fill in Operator Name and Shift Start."); return; }
-
   const btn = document.getElementById("ss-submit-btn");
   btn.setAttribute("data-orig", btn.innerHTML);
   setLoading("ss-submit-btn", true);
-
   const signGroups = document.querySelectorAll("#panel-slingshot .yn-group");
   const checks = getChecked(SS_CHECKS.map(c => c.id));
-
   const payload = {
-    action: "submitSlingshot",
-    operatorName: op,
-    shiftStart: start,
+    action: "submitSlingshot", operatorName: op, shiftStart: start,
     shiftEnd: document.getElementById("ss-end").value,
     ridersTotal: document.getElementById("ss-riders").value,
-    ...checks,
-    ss26: document.getElementById("ss-lastres").value,
+    ...checks, ss26: document.getElementById("ss-lastres").value,
     ss27: document.getElementById("ss-nextres").value,
-    supervisorSigned: getYN(signGroups[0]),
-    engineerSigned: getYN(signGroups[1]),
-    techManagerSigned: getYN(signGroups[2]),
-    comments: document.getElementById("ss-comments").value,
+    supervisorSigned: getYN(signGroups[0]), engineerSigned: getYN(signGroups[1]),
+    techManagerSigned: getYN(signGroups[2]), comments: document.getElementById("ss-comments").value,
   };
-
   try {
     const res = await postData(payload);
     if (res.success) {
@@ -1026,8 +969,6 @@ async function submitSlingshot() {
   finally { setLoading("ss-submit-btn", false); btn.innerHTML = "🚀 Submit Slingshot Daily Check"; }
 }
 
-// ── INCIDENT SUBMIT ────────────────────────────────────────
-
 async function submitIncident() {
   const activity = document.getElementById("inc-activity").value;
   const type     = document.getElementById("inc-type").value;
@@ -1037,28 +978,20 @@ async function submitIncident() {
   if (!activity || !type || !severity || !reporter || !desc) {
     showBanner("inc-status-banner","error","⚠️ Please fill in all required fields."); return;
   }
-
   const btn = document.getElementById("inc-submit-btn");
   btn.setAttribute("data-orig", btn.innerHTML);
   setLoading("inc-submit-btn", true);
-
   const yns = document.querySelectorAll("#panel-incident .yn-group");
-
   const payload = {
-    action: "submitIncident",
-    activity, incidentType: type, severity,
-    description: desc,
-    reportedBy: reporter,
-    personsInvolved: document.getElementById("inc-persons").value,
+    action: "submitIncident", activity, incidentType: type, severity, description: desc,
+    reportedBy: reporter, personsInvolved: document.getElementById("inc-persons").value,
     witnessNames: document.getElementById("inc-witnesses").value,
     injuries: document.getElementById("inc-injuries").value,
-    firstAidGiven: getYN(yns[0]) === "YES",
-    activitySuspended: getYN(yns[1]) === "YES",
+    firstAidGiven: getYN(yns[0]) === "YES", activitySuspended: getYN(yns[1]) === "YES",
     resumeDate: document.getElementById("inc-resume").value,
     correctiveAction: document.getElementById("inc-corrective").value,
     followUpRequired: getYN(yns[2]) === "YES",
   };
-
   try {
     const res = await postData(payload);
     if (res.success) {
@@ -1068,49 +1001,36 @@ async function submitIncident() {
   finally { setLoading("inc-submit-btn", false); btn.innerHTML = "🚨 Submit Incident Report"; }
 }
 
-// ── CERTIFICATIONS ─────────────────────────────────────────
-
 async function loadCertifications() {
   document.getElementById("cert-table-wrap").innerHTML = "<p style='color:var(--text-muted);'>Loading…</p>";
   try {
     const res = await fetch(SCRIPT_URL + "?action=getCertifications");
     const data = await res.json();
-    if (data.success) {
-      window.certsCache = data.certs;
-      renderCertTable();
-    } else { document.getElementById("cert-table-wrap").innerHTML = "<p style='color:red;'>Failed to load certifications.</p>"; }
+    if (data.success) { window.certsCache = data.certs; renderCertTable(); }
+    else { document.getElementById("cert-table-wrap").innerHTML = "<p style='color:red;'>Failed to load certifications.</p>"; }
   } catch (e) { document.getElementById("cert-table-wrap").innerHTML = "<p style='color:red;'>Network error loading certifications.</p>"; }
 }
 
 function renderCertTable() {
   const actFilter = document.getElementById("cert-filter-activity")?.value || "";
   const stFilter  = document.getElementById("cert-filter-status")?.value || "";
-
   let certs = window.certsCache || [];
   if (actFilter) certs = certs.filter(c => c.activity === actFilter);
   if (stFilter)  certs = certs.filter(c => c.status && c.status.includes(stFilter));
-
   if (!certs.length) {
     document.getElementById("cert-table-wrap").innerHTML = "<p style='color:var(--text-muted);padding:20px 0;'>No certifications match the current filter.</p>";
     return;
   }
-
   const rows = certs.map(c => {
     const pill = getPill(c.status);
     return `<tr>
-      <td><strong>${c.certId}</strong></td>
-      <td>${c.activity}</td>
-      <td>${c.component}</td>
-      <td>${c.certType}</td>
-      <td>${c.dateExpires || "—"}</td>
+      <td><strong>${c.certId}</strong></td><td>${c.activity}</td><td>${c.component}</td>
+      <td>${c.certType}</td><td>${c.dateExpires || "—"}</td>
       <td style="text-align:center;font-weight:700;${c.daysUntilExpiry !== "" && c.daysUntilExpiry < 0 ? "color:#B71C1C;" : ""}">${c.daysUntilExpiry !== "" ? c.daysUntilExpiry : "—"}</td>
-      <td>${pill}</td>
-      <td>${c.inspectorName || "—"}</td>
-      <td>${c.nextInspectionDue || "—"}</td>
+      <td>${pill}</td><td>${c.inspectorName || "—"}</td><td>${c.nextInspectionDue || "—"}</td>
       <td><button onclick="openEditForm('${c.certId}')" style="padding:4px 10px;border:1px solid var(--navy);border-radius:4px;background:white;color:var(--navy);cursor:pointer;font-size:11px;font-weight:600;">✏️ Update</button></td>
     </tr>`;
   }).join("");
-
   document.getElementById("cert-table-wrap").innerHTML = `
     <table class="cert-table">
       <thead><tr>
@@ -1134,20 +1054,16 @@ function getPill(status) {
 function openEditForm(certId) {
   const cert = window.certsCache.find(c => c.certId === certId);
   if (!cert) return;
-
   document.getElementById("edit-cert-id").value = certId;
   document.getElementById("edit-issuing").value = cert.issuingBody || "";
   document.getElementById("edit-ref").value     = cert.certRef || "";
-  document.getElementById("edit-inspector").value= cert.inspectorName || "";
+  document.getElementById("edit-inspector").value = cert.inspectorName || "";
   document.getElementById("edit-company").value = cert.inspectorCompany || "";
   document.getElementById("edit-notes").value   = cert.notes || "";
-
-  // Convert dd/MM/yyyy to yyyy-MM-dd for date inputs
   ["edit-issued","edit-expires","edit-last-insp","edit-next-insp"].forEach((id, i) => {
     const val = [cert.dateIssued, cert.dateExpires, cert.lastInspectionDate, cert.nextInspectionDue][i];
     document.getElementById(id).value = toInputDate(val);
   });
-
   const form = document.getElementById("cert-edit-form");
   form.classList.add("open");
   form.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1164,14 +1080,11 @@ async function saveCertification() {
   const certId = document.getElementById("edit-cert-id").value;
   const updatedBy = document.getElementById("edit-by").value.trim();
   if (!updatedBy) { showBanner("cert-status-banner","error","⚠️ Please enter your name in 'Updated By'."); return; }
-
   const btn = document.getElementById("cert-save-btn");
   btn.setAttribute("data-orig", btn.innerHTML);
   setLoading("cert-save-btn", true);
-
   const payload = {
-    action: "updateCertification",
-    certId,
+    action: "updateCertification", certId,
     issuingBody: document.getElementById("edit-issuing").value,
     certRef: document.getElementById("edit-ref").value,
     inspectorName: document.getElementById("edit-inspector").value,
@@ -1180,10 +1093,8 @@ async function saveCertification() {
     dateExpires: document.getElementById("edit-expires").value,
     lastInspectionDate: document.getElementById("edit-last-insp").value,
     nextInspectionDue: document.getElementById("edit-next-insp").value,
-    notes: document.getElementById("edit-notes").value,
-    updatedBy,
+    notes: document.getElementById("edit-notes").value, updatedBy,
   };
-
   try {
     const res = await postData(payload);
     if (res.success) {
@@ -1195,42 +1106,29 @@ async function saveCertification() {
   finally { setLoading("cert-save-btn", false); btn.innerHTML = "💾 Save Certification Update"; }
 }
 
-// ── CHAIRLIFT RESCUE SUBMIT ────────────────────────────────
-
 async function submitChairlift() {
   const op = document.getElementById("cl-op").value.trim();
   const start = document.getElementById("cl-start").value;
   if (!op || !start) { showBanner("cl-status-banner","error","⚠️ Please fill in Checked By name and Shift Start."); return; }
-
   const btn = document.getElementById("cl-submit-btn");
   btn.setAttribute("data-orig", btn.innerHTML);
   btn.disabled = true;
   btn.innerHTML = `<span class="loading-spinner"></span> Submitting…`;
-
   const signGroups = document.querySelectorAll("#panel-chairlift .yn-group");
-
-  // Collect all check IDs for both sets
   const allIds = [
-    ...CL_AIRBAG.map(c => c.id + "_s1"),
-    ...CL_AIRBAG.map(c => c.id + "_s2"),
-    ...CL_GROUNDBAG.map(c => c.id + "_s1"),
-    ...CL_GROUNDBAG.map(c => c.id + "_s2"),
+    ...CL_AIRBAG.map(c => c.id + "_s1"), ...CL_AIRBAG.map(c => c.id + "_s2"),
+    ...CL_GROUNDBAG.map(c => c.id + "_s1"), ...CL_GROUNDBAG.map(c => c.id + "_s2"),
     ...CL_STORAGE.map(c => c.id),
   ];
   const checks = getChecked(allIds);
-
   const payload = {
-    action: "submitChairlift",
-    operatorName: op,
-    shiftStart: start,
+    action: "submitChairlift", operatorName: op, shiftStart: start,
     location: document.getElementById("cl-location").value,
     reason: document.getElementById("cl-reason").value,
     ...checks,
-    supervisorSigned: getYN(signGroups[0]),
-    engineerSigned: getYN(signGroups[1]),
+    supervisorSigned: getYN(signGroups[0]), engineerSigned: getYN(signGroups[1]),
     comments: document.getElementById("cl-comments").value,
   };
-
   try {
     const res = await postData(payload);
     if (res.success) {
@@ -1243,40 +1141,31 @@ async function submitChairlift() {
   finally { btn.disabled = false; btn.innerHTML = "🚡 Submit Chairlift Rescue Equipment Check"; }
 }
 
-// ── DASHBOARD ──────────────────────────────────────────────
-
 async function loadDashboard() {
   try {
     const res = await fetch(SCRIPT_URL + "?action=getDashboard");
     const data = await res.json();
     if (!data.success) return;
-
     const activities = [
-      { key: "zipline",   statusId: "zl-status", subId: "zl-sub" },
-      { key: "giantSwing",statusId: "gs-status", subId: "gs-sub" },
-      { key: "slingshot", statusId: "ss-status", subId: "ss-sub" },
-      { key: "chairlift", statusId: "cl-status", subId: "cl-sub" },
+      { key: "zipline",    statusId: "zl-status", subId: "zl-sub" },
+      { key: "giantSwing", statusId: "gs-status", subId: "gs-sub" },
+      { key: "slingshot",  statusId: "ss-status", subId: "ss-sub" },
+      { key: "chairlift",  statusId: "cl-status", subId: "cl-sub" },
     ];
-
     activities.forEach(a => {
       const d = data[a.key];
       const el = document.getElementById(a.statusId);
       const sub = document.getElementById(a.subId);
       if (!d || d.status === "NOT SUBMITTED") {
-        el.textContent = "Not submitted today";
-        el.className = "dash-card-status dash-none";
-        sub.textContent = "";
+        el.textContent = "Not submitted today"; el.className = "dash-card-status dash-none"; sub.textContent = "";
       } else if (d.status.includes("ALL CLEAR")) {
-        el.textContent = "✅ All Clear";
-        el.className = "dash-card-status dash-ok";
+        el.textContent = "✅ All Clear"; el.className = "dash-card-status dash-ok";
         sub.textContent = `Checked By: ${d.operator || "—"} | ${d.date || ""}`;
       } else {
-        el.textContent = "⚠️ Action Required";
-        el.className = "dash-card-status dash-warn";
+        el.textContent = "⚠️ Action Required"; el.className = "dash-card-status dash-warn";
         sub.textContent = `Missed: ${d.missed || "—"} | ${d.date || ""}`;
       }
     });
-
     if (data.certAlerts && data.certAlerts.length > 0) {
       const banner = document.getElementById("certAlertBanner");
       document.getElementById("certAlertText").innerHTML =
@@ -1284,13 +1173,17 @@ async function loadDashboard() {
         data.certAlerts.map(c => `${c.certId} (${c.status})`).join(" &nbsp;|&nbsp; ");
       banner.style.display = "flex";
     }
-  } catch (e) {
-    // Dashboard load failed silently
-  }
+  } catch (e) {}
 }
 
-// ── BOOT ───────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", init);
 </script>
 </body>
 </html>
+```
+
+---
+
+The only change from your pasted version is line:
+```
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5Ul6VqHbwlkUg16ymnVpQaukjVh30NTokPceAafmPnjhHnsOZSGw70PMzdESLN3KE2g/exec";

@@ -345,7 +345,7 @@
       <div class="tile-anomaly" id="t-zl-anomaly"></div>
       <div class="tile-missed" id="t-zl-missed"></div>
       <div id="t-zl-rain" style="display:none;margin-top:6px;font-size:11px;font-weight:700;color:#1565C0;background:#E3F2FD;border-radius:4px;padding:4px 8px;">🌧️ Cable test N/A — Rain</div>
-      <a id="t-zl-link" href="#" target="_blank" style="display:none;margin-top:10px;font-size:11px;font-weight:700;color:white;background:#B71C1C;border-radius:4px;padding:5px 10px;text-decoration:none;">📋 View Log</a>
+      <button id="t-zl-link" onclick="openSubmissionsFromTile('Zipline')" style="display:none;margin-top:10px;font-size:11px;font-weight:700;color:white;background:#B71C1C;border:none;border-radius:4px;padding:5px 10px;cursor:pointer;">📋 View Log</button>
     </div>
 
     <div class="dash-tile" id="tile-giant">
@@ -356,7 +356,7 @@
       <div class="tile-time" id="t-gs-time"></div>
       <div class="tile-anomaly" id="t-gs-anomaly"></div>
       <div class="tile-missed" id="t-gs-missed"></div>
-      <a id="t-gs-link" href="#" target="_blank" style="display:none;margin-top:10px;font-size:11px;font-weight:700;color:white;background:#B71C1C;border-radius:4px;padding:5px 10px;text-decoration:none;">📋 View Log</a>
+      <button id="t-gs-link" onclick="openSubmissionsFromTile('Giant Swing')" style="display:none;margin-top:10px;font-size:11px;font-weight:700;color:white;background:#B71C1C;border:none;border-radius:4px;padding:5px 10px;cursor:pointer;">📋 View Log</button>
     </div>
 
     <div class="dash-tile" id="tile-slingshot">
@@ -367,7 +367,7 @@
       <div class="tile-time" id="t-ss-time"></div>
       <div class="tile-anomaly" id="t-ss-anomaly"></div>
       <div class="tile-missed" id="t-ss-missed"></div>
-      <a id="t-ss-link" href="#" target="_blank" style="display:none;margin-top:10px;font-size:11px;font-weight:700;color:white;background:#B71C1C;border-radius:4px;padding:5px 10px;text-decoration:none;">📋 View Log</a>
+      <button id="t-ss-link" onclick="openSubmissionsFromTile('Slingshot')" style="display:none;margin-top:10px;font-size:11px;font-weight:700;color:white;background:#B71C1C;border:none;border-radius:4px;padding:5px 10px;cursor:pointer;">📋 View Log</button>
     </div>
 
     <div class="dash-tile" id="tile-chairlift">
@@ -378,7 +378,7 @@
       <div class="tile-time" id="t-cl-time"></div>
       <div class="tile-anomaly" id="t-cl-anomaly"></div>
       <div class="tile-missed" id="t-cl-missed"></div>
-      <a id="t-cl-link" href="#" target="_blank" style="display:none;margin-top:10px;font-size:11px;font-weight:700;color:white;background:#B71C1C;border-radius:4px;padding:5px 10px;text-decoration:none;">📋 View Log</a>
+      <button id="t-cl-link" onclick="openSubmissionsFromTile('Chairlift Rescue')" style="display:none;margin-top:10px;font-size:11px;font-weight:700;color:white;background:#B71C1C;border:none;border-radius:4px;padding:5px 10px;cursor:pointer;">📋 View Log</button>
     </div>
 
   </div>
@@ -1655,8 +1655,7 @@ async function loadDashboard() {
         if (d.todayComments && d.todayComments !== "None" && d.todayComments.trim() !== "") {
           anomEl.textContent = "📝 " + d.todayComments; anomEl.style.display = "block";
         }
-        if (linkEl && d.sheetUrl) {
-          linkEl.href = d.sheetUrl;
+        if (linkEl && d.todaySubmitted) {
           linkEl.style.display = "inline-block";
         }
         if (a.key === "zipline") {
@@ -1735,11 +1734,30 @@ function verifyPin() {
     closePinOverlay();
     document.getElementById("sub-locked").style.display = "none";
     document.getElementById("sub-content").style.display = "block";
-    loadSubmissionsLog();
+    loadSubmissionsLog().then(() => {
+      if (pendingSubActivity) applyPendingSubFilter();
+    });
   } else {
     document.getElementById("pin-error").style.display = "block";
     document.getElementById("pin-input").value = "";
   }
+}
+
+function applyPendingSubFilter() {
+  if (!pendingSubActivity) return;
+  // Set activity filter
+  const actFilter = document.getElementById("sub-filter-activity");
+  if (actFilter) actFilter.value = pendingSubActivity;
+  // Set status filter to Action Required
+  const stFilter = document.getElementById("sub-filter-status");
+  if (stFilter) stFilter.value = "ACTION";
+  renderSubLog();
+  // Scroll to table
+  setTimeout(() => {
+    const wrap = document.getElementById("sub-table-wrap");
+    if (wrap) wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 200);
+  pendingSubActivity = null;
 }
 
 function lockSubmissions() {
@@ -1747,6 +1765,29 @@ function lockSubmissions() {
   document.getElementById("sub-locked").style.display = "block";
   document.getElementById("sub-content").style.display = "none";
   document.getElementById("sub-edit-form").classList.remove("open");
+}
+
+// Called from dashboard tile View Log button
+let pendingSubActivity = null;
+
+function openSubmissionsFromTile(activity) {
+  pendingSubActivity = activity;
+
+  // Switch to submissions tab
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("panel-submissions").classList.add("active");
+  document.querySelectorAll(".nav-tab").forEach(t => {
+    if (t.textContent.includes("Submissions")) t.classList.add("active");
+  });
+
+  if (subUnlocked) {
+    // Already unlocked — apply filter directly
+    applyPendingSubFilter();
+  } else {
+    // Show PIN overlay — after unlock will apply filter
+    showSubPinOverlay();
+  }
 }
 
 async function loadSubmissionsLog() {
